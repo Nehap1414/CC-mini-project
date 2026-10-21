@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudBridge | Cloud Intelligence</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<header class="navbar">
+    <a class="logo" href="/"><span class="logo-icon">☁</span> CloudBridge</a>
+    <nav>
+        <a class="nav-active" href="/">⌂ Home</a>
+        <a href="#compare">◎ Compare</a>
+        <a href="#forecast">↗ Forecast</a>
+        <a href="#history">◷ History</a>
+    </nav>
+    <span class="online"><i></i> System Online</span>
+</header>
+
+<main class="page">
+    <section class="hero">
+        <div class="hero-copy">
+            <span class="eyebrow">MULTI-CLOUD RESOURCE COMPARISON SIMULATOR</span>
+            <h1>Find the Best Cloud<br>for <span>Your Needs.</span></h1>
+            <p>Compare costs, forecast your cloud spending, and choose a suitable provider for your workload.</p>
+            <div class="benefits">
+                <div class="benefit"><span class="benefit-icon purple">ϟ</span><div><b>Save Costs</b><small>Compare estimated rates</small></div></div>
+                <div class="benefit"><span class="benefit-icon cyan">⬡</span><div><b>Smart Decisions</b><small>Priority-based scoring</small></div></div>
+                <div class="benefit"><span class="benefit-icon green">☁</span><div><b>3 Providers</b><small>AWS, Azure, Google Cloud</small></div></div>
+            </div>
+        </div>
+        <div class="hero-art">
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            <div class="cloud-glow">☁</div>
+            <div class="provider-float aws-float">aws <span>⌣</span></div>
+            <div class="provider-float azure-float"><b>▲</b> Microsoft Azure</div>
+            <div class="provider-float google-float"><b>●</b> Google Cloud</div>
+            <div class="hero-caption">Smarter cloud choices<br>for a brighter future</div>
+        </div>
+    </section>
+
+    <section class="panel configure" id="compare">
+        <div class="section-title">
+            <div><h2>Configure Your Workload</h2><p>Customize your workload and monthly spending limit.</p></div>
+            <span class="step-pill">01 / CONFIGURATION</span>
+        </div>
+
+        <form method="POST" action="/">
+            <div class="form-grid">
+                <label>Virtual Machines
+                    <div class="input-wrap"><span>▦</span><input type="number" name="vms" min="1" max="10000" value="{{ request.form.get('vms', '2') }}" required></div>
+                </label>
+                <label>Usage Hours per Month
+                    <div class="input-wrap"><span>◷</span><input type="number" name="hours" min="0" max="100000" step="any" value="{{ request.form.get('hours', '730') }}" required></div>
+                </label>
+                <label>Storage Required (GB)
+                    <div class="input-wrap"><span>▤</span><input type="number" name="storage" min="0" max="10000000" step="any" value="{{ request.form.get('storage', '100') }}" required></div>
+                </label>
+                <label>Optimization Priority
+                    <div class="input-wrap"><span>◎</span>
+                        <select name="priority">
+                            <option value="cost" {% if priority == 'cost' %}selected{% endif %}>Lowest Cost</option>
+                            <option value="memory" {% if priority == 'memory' %}selected{% endif %}>Memory Focused</option>
+                            <option value="balanced" {% if priority == 'balanced' %}selected{% endif %}>Balanced</option>
+                        </select>
+                    </div>
+                </label>
+                <label class="budget-field">Monthly Budget (USD)
+                    <div class="input-wrap"><span>$</span><input type="number" name="budget" min="0" max="1000000000" step="any" value="{{ request.form.get('budget', '100') }}" required></div>
+                </label>
+            </div>
+            <button class="primary-btn" type="submit">Analyze My Cloud Workload <span>→</span></button>
+        </form>
+    </section>
+
+    {% if error %}
+    <div class="error-message">⚠ {{ error }}</div>
+    {% endif %}
+
+    {% if results %}
+    <div class="results-topline">
+        <div><span class="eyebrow">YOUR ANALYSIS</span><h2>Cloud Cost Intelligence</h2></div>
+        <span class="sample-badge">Illustrative Sample Rates · USD</span>
+    </div>
+
+    <section class="forecast-grid" id="forecast">
+        <article class="metric-card">
+            <span class="metric-icon">◷</span><p>Recommended Monthly Cost</p>
+            <h2>${{ "%.2f"|format(recommendation.total) }}</h2>
+            <small>Estimated for your workload</small>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon">↗</span><p>Projected Yearly Cost</p>
+            <h2>${{ "%.2f"|format(recommendation.yearly) }}</h2>
+            <small>Monthly estimate × 12</small>
+        </article>
+        <article class="metric-card {% if budget_difference > 0 %}metric-warning{% else %}metric-good{% endif %}">
+            <span class="metric-icon">{% if budget_difference > 0 %}⚠{% else %}✓{% endif %}</span>
+            <p>Monthly Budget Status</p>
+            {% if budget_difference > 0 %}
+            <h2>+$ {{ "%.2f"|format(budget_difference) }}</h2>
+            <small>Over budget by this amount</small>
+            {% else %}
+            <h2>${{ "%.2f"|format(-budget_difference) }}</h2>
+            <small>Estimated budget remaining</small>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="budget-alert {% if budget_difference > 0 %}alert-danger{% else %}alert-success{% endif %}">
+        <span>{% if budget_difference > 0 %}⚠{% else %}✓{% endif %}</span>
+        <div>
+            <strong>{% if budget_difference > 0 %}Budget limit exceeded{% else %}Within your budget{% endif %}</strong>
+            <p>
+                {% if budget_difference > 0 %}
+                    The recommended monthly estimate is ${{ "%.2f"|format(budget_difference) }} above your ${{ "%.2f"|format(budget) }} budget.
+                {% else %}
+                    The recommended monthly estimate is within your ${{ "%.2f"|format(budget) }} budget.
+                {% endif %}
+            </p>
+        </div>
+    </section>
+
+    <section class="dashboard-grid">
+        <div class="main-column">
+            <section class="panel comparison-panel">
+                <div class="section-title">
+                    <div><h2>Provider Cost Comparison</h2><p>Compare estimated compute and storage expenses.</p></div>
+                    <span class="step-pill">03 PROVIDERS</span>
+                </div>
+
+                <div class="provider-grid">
+                    {% for item in results %}
+                    <article class="provider-card provider-{{ loop.index }} {% if item.provider == recommendation.provider %}selected-provider{% endif %}">
+                        <div class="provider-heading">
+                            {% if item.provider == 'AWS' %}
+                            <span class="provider-logo aws-logo">aws<span>⌣</span></span>
+                            {% elif item.provider == 'Azure' %}
+                            <span class="provider-logo azure-logo">▲</span>
+                            {% else %}
+                            <span class="provider-logo google-logo">●</span>
+                            {% endif %}
+                            {% if item.provider == recommendation.provider %}
+                            <span class="best-badge">Recommended</span>
+                            {% endif %}
+                        </div>
+                        <h3>{{ item.provider }}</h3>
+                        <div class="price">${{ "%.2f"|format(item.total) }}<small> / month</small></div>
+                        <div class="yearly-price">${{ "%.2f"|format(item.yearly) }} / year</div>
+                        <div class="cost-line"><span>Compute Cost</span><b>${{ "%.2f"|format(item.compute) }}</b></div>
+                        <div class="cost-line"><span>Storage Cost</span><b>${{ "%.2f"|format(item.storage) }}</b></div>
+                        <div class="score-row"><span>Memory suitability</span><b>{{ item.memory_score }}/100</b></div>
+                        <div class="score-track"><span style="width:{{ item.memory_score }}%"></span></div>
+                        <div class="provider-footer">
+                            {% if priority == 'balanced' %}Balanced score: {{ item.balanced_score }}/100
+                            {% elif priority == 'memory' %}Memory score: {{ item.memory_score }}/100
+                            {% else %}Cost score: {{ item.cost_score }}/100{% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+
+                <div class="chart-panel">
+                    <div class="chart-heading"><div><h3>◷ Cost Comparison Chart</h3><p>Estimated monthly costs (USD)</p></div><span class="chart-label">COST ANALYSIS</span></div>
+                    <div class="chart-container"><canvas id="costChart"></canvas></div>
+                </div>
+            </section>
+        </div>
+
+        <aside class="side-column">
+            <section class="recommend-card">
+                <div class="trophy">✧</div>
+                <span class="eyebrow">SMART RECOMMENDATION</span>
+                <h2>{{ recommendation.provider }}</h2>
+                <p>{{ reason }}</p>
+                <div class="recommend-points">
+                    <span>✓ &nbsp; Priority: {{ priority_labels[priority] }}</span>
+                    <span>✓ &nbsp; Monthly: ${{ "%.2f"|format(recommendation.total) }}</span>
+                    <span>✓ &nbsp; Yearly: ${{ "%.2f"|format(recommendation.yearly) }}</span>
+                </div>
+                <form method="POST" action="{{ url_for('download_report') }}">
+                    <input type="hidden" name="vms" value="{{ vms }}">
+                    <input type="hidden" name="hours" value="{{ hours }}">
+                    <input type="hidden" name="storage" value="{{ storage }}">
+                    <input type="hidden" name="priority" value="{{ priority }}">
+                    <input type="hidden" name="budget" value="{{ budget }}">
+                    <button class="recommend-btn" type="submit">⇩ Download PDF Report</button>
+                </form>
+            </section>
+
+            <section class="panel insights">
+                <h3>✧ Key Insights</h3>
+                <p>Your selected priority is <strong>{{ priority_labels[priority] }}</strong>. The recommendation is calculated from the project's sample rates and scoring rules.</p>
+                <div class="saving-box">
+                    <span>↗</span>
+                    <div><b>Forecast Assumption</b><p>The yearly estimate assumes the same monthly workload and rates for 12 months.</p></div>
+                </div>
+                <div class="saving-box secondary-insight">
+                    <span>ⓘ</span>
+                    <div><b>Demo Data</b><p>Suitability scores are illustrative and are not provider benchmarks.</p></div>
+                </div>
+            </section>
+        </aside>
+    </section>
+    {% else %}
+    <section class="welcome-panel">
+        <div class="welcome-symbol">☁</div>
+        <h2>Your Cloud Intelligence Dashboard</h2>
+        <p>Configure your workload and monthly budget, then analyze your options to unlock provider comparisons, smart recommendations, budget alerts, forecasts, and PDF reports.</p>
+        <div class="welcome-stats">
+            <span><b>03</b><small>Cloud Providers</small></span>
+            <span><b>12×</b><small>Yearly Forecast</small></span>
+            <span><b>PDF</b><small>Download Reports</small></span>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="panel history-panel" id="history">
+        <div class="section-title">
+            <div><span class="eyebrow">SAVED ANALYSIS</span><h2>Recent Comparison History</h2><p>Your last 10 saved comparisons.</p></div>
+            <span class="history-count">{{ history|length }} RECORDS</span>
+        </div>
+        {% if history %}
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Date & Time</th><th>VMs</th><th>Hours</th><th>Storage (GB)</th><th>Priority</th><th>Recommended</th><th>Monthly Cost</th></tr></thead>
+                <tbody>
+                    {% for row in history %}
+                    <tr>
+                        <td>{{ row["created_at"] }}</td><td>{{ row["vms"] }}</td><td>{{ row["hours"] }}</td>
+                        <td>{{ row["storage"] }}</td><td>{{ priority_labels.get(row["priority"], row["priority"]|title) }}</td>
+                        <td><span class="history-provider">{{ row["recommended_provider"] }}</span></td>
+                        <td class="table-price">${{ "%.2f"|format(row["lowest_cost"]) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-history">No saved comparisons yet. Run your first comparison to start your history.</div>
+        {% endif %}
+    </section>
+
+    <footer id="about">
+        <a class="logo footer-logo" href="/">☁ CloudBridge</a>
+        <p>Multi-Cloud Resource Comparison Simulator</p>
+        <p class="disclaimer">All cloud rates and suitability scores are illustrative demo data, not live prices or billing quotes. Actual costs depend on region, configuration, licensing, discounts, data transfer, and other services.</p>
+        <span>BUILT WITH FLASK · SQLITE · CHART.JS · REPORTLAB</span>
+    </footer>
+</main>
+
+{% if results %}
+<script>
+const labels = {{ results | map(attribute='provider') | list | tojson }};
+const costs = {{ results | map(attribute='total') | list | tojson }};
+const chart = document.getElementById('costChart');
+
+new Chart(chart, {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Estimated monthly cost',
+            data: costs,
+            backgroundColor: [
+                'rgba(255, 170, 52, .9)',
+                'rgba(63, 154, 255, .9)',
+                'rgba(48, 226, 174, .9)'
+            ],
+            borderColor: ['#ffb54d', '#48aaff', '#30e2ae'],
+            borderWidth: 1,
+            borderRadius: 7,
+            maxBarThickness: 100
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: context => '$' + Number(context.raw).toFixed(2)
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: '#d7e4ff' },
+                grid: { display: false },
+                border: { color: '#23395b' }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: '#90a7c8',
+                    callback: value => '$' + value
+                },
+                grid: { color: 'rgba(111, 150, 205, .12)' },
+                border: { display: false }
+            }
+        }
+    }
+});
+</script>
+{% endif %}
+</body>
+</html>
